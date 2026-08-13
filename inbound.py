@@ -36,6 +36,19 @@ _INBOUND_MESSAGE_MAX_CHARS = 100_000
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
+def _is_room_allowed(room_id: str) -> bool:
+    """True unless ROCKETCHAT_ALLOWED_ROOMS is set and room_id is absent.
+
+    An empty/unset allowlist keeps the default behavior (no room gating);
+    DM room ids are matched like any other room id.
+    """
+    raw = os.getenv("ROCKETCHAT_ALLOWED_ROOMS", "")
+    if not raw.strip():
+        return True
+    allowed = {room.strip() for room in raw.split(",") if room.strip()}
+    return room_id in allowed
+
+
 def _thread_context_budget() -> int:
     try:
         value = int(
@@ -330,6 +343,16 @@ class InboundMixin:
 
         room_id = post.get("rid", "")
         if not is_valid_server_identifier(room_id):
+            return
+
+        # Room allowlist gate: when ROCKETCHAT_ALLOWED_ROOMS is set, only
+        # messages from those rooms are handled at all.
+        if not _is_room_allowed(room_id):
+            logger.info(
+                "Rocket.Chat: ignored message from room not in "
+                "ROCKETCHAT_ALLOWED_ROOMS: %s",
+                room_id,
+            )
             return
 
         # Look up room type lazily; cache forever.

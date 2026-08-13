@@ -971,6 +971,28 @@ class TestHandleMessage:
         adapter.handle_message.assert_not_awaited()
 
     @pytest.mark.asyncio
+    async def test_room_outside_allowlist_ignored(self, monkeypatch):
+        monkeypatch.setenv("ROCKETCHAT_ALLOWED_ROOMS", "other_room,room2")
+        adapter = _wired_adapter(room_type="channel")
+        await adapter._handle_message(_post())
+        adapter._resolve_room_type.assert_not_awaited()
+        adapter.handle_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_room_in_allowlist_dispatched(self, monkeypatch):
+        monkeypatch.setenv("ROCKETCHAT_ALLOWED_ROOMS", "room1,room2")
+        adapter = _wired_adapter(room_type="dm")
+        await adapter._handle_message(_post())
+        adapter.handle_message.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_empty_allowlist_leaves_rooms_unrestricted(self, monkeypatch):
+        monkeypatch.setenv("ROCKETCHAT_ALLOWED_ROOMS", "")
+        adapter = _wired_adapter(room_type="dm")
+        await adapter._handle_message(_post())
+        adapter.handle_message.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_dm_dispatched_without_mention(self):
         adapter = _wired_adapter(room_type="dm")
         await adapter._handle_message(_post())
