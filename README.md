@@ -7,7 +7,7 @@ Connects Hermes Agent to a self-hosted Rocket.Chat instance via REST API v1 (out
 ## Installation
 
 ```bash
-hermes plugins install HalfbitStudio/hermes-plugin-rocketchat
+hermes plugins install suninuni/hermes-plugin-rocketchat
 ```
 
 The installer clones this repo into `~/.hermes/plugins/rocketchat-platform/` and prompts you to enable it. If you skipped the prompt:
