@@ -975,14 +975,17 @@ class TestHandleMessage:
         monkeypatch.setenv("ROCKETCHAT_ALLOWED_ROOMS", "other_room,room2")
         adapter = _wired_adapter(room_type="channel")
         await adapter._handle_message(_post())
-        adapter._resolve_room_type.assert_not_awaited()
+        adapter._resolve_room_type.assert_awaited_once_with("room1")
         adapter.handle_message.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_room_in_allowlist_dispatched(self, monkeypatch):
         monkeypatch.setenv("ROCKETCHAT_ALLOWED_ROOMS", "room1,room2")
-        adapter = _wired_adapter(room_type="dm")
-        await adapter._handle_message(_post())
+        adapter = _wired_adapter(room_type="channel")
+        await adapter._handle_message(_post(
+            msg="@hermesbot hello",
+            mentions=[{"_id": "bot_uid", "username": "hermesbot"}],
+        ))
         adapter.handle_message.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -991,6 +994,26 @@ class TestHandleMessage:
         adapter = _wired_adapter(room_type="dm")
         await adapter._handle_message(_post())
         adapter.handle_message.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_dm_from_allowlisted_user_survives_room_allowlist(
+        self, monkeypatch
+    ):
+        monkeypatch.setenv("ROCKETCHAT_ALLOWED_ROOMS", "GENERAL")
+        monkeypatch.setenv("ROCKETCHAT_ALLOWED_USERS", "u1")
+        adapter = _wired_adapter(room_type="dm")
+        await adapter._handle_message(_post())
+        adapter.handle_message.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_dm_from_unknown_user_blocked_by_room_allowlist(
+        self, monkeypatch
+    ):
+        monkeypatch.setenv("ROCKETCHAT_ALLOWED_ROOMS", "GENERAL")
+        monkeypatch.setenv("ROCKETCHAT_ALLOWED_USERS", "someone-else")
+        adapter = _wired_adapter(room_type="dm")
+        await adapter._handle_message(_post())
+        adapter.handle_message.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_dm_dispatched_without_mention(self):

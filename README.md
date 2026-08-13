@@ -104,9 +104,12 @@ The bot only receives messages from rooms it is a **member** of (the DDP `__my_m
 
 To restrict handling to a fixed set of rooms regardless of membership, set
 `ROCKETCHAT_ALLOWED_ROOMS` to the comma-separated room IDs the bot may respond
-in. DM room IDs are matched like any other room ID, so DMs are ignored unless
-their `rid` is listed. Leave the variable empty (the default) to disable room
-gating entirely.
+in. Leave the variable empty (the default) to disable room gating entirely.
+
+DMs are exempt from the room list: a direct message is still handled when its
+sender is in `ROCKETCHAT_ALLOWED_USERS` (or when `ROCKETCHAT_ALLOW_ALL_USERS=true`),
+so allowlisted users can always reach the bot directly even when group replies
+are scoped to the listed rooms.
 
 In channels the bot answers only when @mentioned (unless the room ID is in `ROCKETCHAT_FREE_RESPONSE_CHANNELS` or you set `ROCKETCHAT_REQUIRE_MENTION=false`). With `ROCKETCHAT_REPLY_MODE=thread`, only the first message needs the mention: replies inside that active Hermes thread are picked up automatically, while unrelated threads remain ignored.
 
@@ -150,7 +153,7 @@ The adapter reconnects automatically (exponential backoff 2–60s), but a too-ag
 | `ROCKETCHAT_USER_ID` | ✅ | — | Bot user `_id` |
 | `ROCKETCHAT_ALLOWED_USERS` | — | `""` | Comma-separated list of allowed user IDs |
 | `ROCKETCHAT_ALLOW_ALL_USERS` | — | `false` | Allow all users (dev only) |
-| `ROCKETCHAT_ALLOWED_ROOMS` | — | `""` | Comma-separated room IDs; when set, only messages from these rooms are handled (leave empty for no room gating) |
+| `ROCKETCHAT_ALLOWED_ROOMS` | — | `""` | Comma-separated room IDs; when set, non-DM messages are limited to these rooms, while DMs stay open to allowlisted users (leave empty for no room gating) |
 | `ROCKETCHAT_BOT_PEERS` | — | `""` | Comma-separated bot usernames or IDs used when Rocket.Chat omits bot metadata; ordinary messages from these peers are ignored, while explicit delegations are accepted |
 | `ROCKETCHAT_HOME_CHANNEL` | — | — | Room ID for cron / notification delivery |
 | `ROCKETCHAT_SUPPRESS_HOME_CHANNEL_NOTICE` | — | `false` | Suppress the one-time `/sethome` notice when no home channel is configured |

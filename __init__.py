@@ -23,7 +23,7 @@ Environment variables:
     ROCKETCHAT_USER_ID          Bot user's _id (shown alongside the PAT)
     ROCKETCHAT_ALLOWED_USERS    Comma-separated user IDs
     ROCKETCHAT_ALLOW_ALL_USERS  Allow all users (dev only)
-    ROCKETCHAT_ALLOWED_ROOMS    Comma-separated room IDs; when set, only these rooms are handled
+    ROCKETCHAT_ALLOWED_ROOMS    Room IDs limiting non-DM handling; DMs stay open to allowlisted users
     ROCKETCHAT_BOT_PEERS        Peer bot usernames/IDs (ordinary DMs ignored)
     ROCKETCHAT_HOME_CHANNEL     Room ID for cron/notification delivery
     ROCKETCHAT_SUPPRESS_HOME_CHANNEL_NOTICE  Hide missing-home-channel notice

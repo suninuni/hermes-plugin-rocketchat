@@ -36,17 +36,29 @@ _INBOUND_MESSAGE_MAX_CHARS = 100_000
 _TRUE_VALUES = {"1", "true", "yes", "on"}
 
 
-def _is_room_allowed(room_id: str) -> bool:
-    """True unless ROCKETCHAT_ALLOWED_ROOMS is set and room_id is absent.
+def _room_admission_allowed(
+    room_id: str, chat_type: str, sender_id: str
+) -> bool:
+    """Gate non-DM messages to ROCKETCHAT_ALLOWED_ROOMS; keep DMs open to
+    allowlisted users (or everyone when ROCKETCHAT_ALLOW_ALL_USERS is set).
 
-    An empty/unset allowlist keeps the default behavior (no room gating);
-    DM room ids are matched like any other room id.
+    An empty/unset ROCKETCHAT_ALLOWED_ROOMS keeps the default behavior
+    (no room gating at all).
     """
     raw = os.getenv("ROCKETCHAT_ALLOWED_ROOMS", "")
     if not raw.strip():
         return True
-    allowed = {room.strip() for room in raw.split(",") if room.strip()}
-    return room_id in allowed
+    if chat_type == "dm":
+        if os.getenv("ROCKETCHAT_ALLOW_ALL_USERS", "").lower() in _TRUE_VALUES:
+            return True
+        allowed_users = {
+            user.strip()
+            for user in os.getenv("ROCKETCHAT_ALLOWED_USERS", "").split(",")
+            if user.strip()
+        }
+        return bool(sender_id and sender_id in allowed_users)
+    allowed_rooms = {room.strip() for room in raw.split(",") if room.strip()}
+    return room_id in allowed_rooms
 
 
 def _thread_context_budget() -> int:
@@ -345,20 +357,21 @@ class InboundMixin:
         if not is_valid_server_identifier(room_id):
             return
 
-        # Room allowlist gate: when ROCKETCHAT_ALLOWED_ROOMS is set, only
-        # messages from those rooms are handled at all.
-        if not _is_room_allowed(room_id):
+        # Look up room type lazily; cache forever.
+        chat_type = self._room_type_cache.get(room_id)
+        if chat_type is None:
+            chat_type = await self._resolve_room_type(room_id)
+
+        # Room admission gate: when ROCKETCHAT_ALLOWED_ROOMS is set, non-DM
+        # messages must come from one of those rooms. DMs stay usable to
+        # allowlisted users so direct contact is not blocked by group scope.
+        if not _room_admission_allowed(room_id, chat_type, sender_id):
             logger.info(
                 "Rocket.Chat: ignored message from room not in "
                 "ROCKETCHAT_ALLOWED_ROOMS: %s",
                 room_id,
             )
             return
-
-        # Look up room type lazily; cache forever.
-        chat_type = self._room_type_cache.get(room_id)
-        if chat_type is None:
-            chat_type = await self._resolve_room_type(room_id)
 
         # Handle system messages: skip all except topic changes in DMs.
         t_type = post.get("t")
